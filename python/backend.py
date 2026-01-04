@@ -158,7 +158,7 @@ def analyze_stock(stock_symbol, date_from, date_to):
 
         print(f"Data downloaded successfully: {len(data)} rows")
 
-        # Extract Close prices
+        # Extract Close prices safely
         if 'Close' in data.columns:
             prices = data['Close'].dropna().to_numpy(dtype=np.float64)
         else:
@@ -196,20 +196,19 @@ def analyze_stock(stock_symbol, date_from, date_to):
         ai_explanation = None
         if GEMINI_AVAILABLE and GEMINI_API_KEY:
             try:
-                explanation_prompt = f"""Analyze this stock and provide a brief, professional trading explanation:
+                explanation_prompt = f"""Analyze this stock and provide a brief explanation:
 Stock Analysis Summary:
-- Current Price: ₹{round(float(prices[-1]), 2)}
-- EMA: ₹{round(float(ema), 2)}
-- SMA: ₹{round(float(sma), 2)}
-- RSI: {round(float(rsi), 2)}
-- Volatility: {round((float(vol) / float(sma) * 100) if sma > 0 else 0, 2)}%
-- Support Level: ₹{round(float(support_level), 2)}
-- Resistance Level: ₹{round(float(resistance_level), 2)}
+- Current Price: ₹{round(float(prices[-1]),2)}
+- EMA: ₹{round(float(ema),2)}
+- SMA: ₹{round(float(sma),2)}
+- RSI: {round(float(rsi),2)}
+- Volatility: {round((float(vol)/float(sma)*100) if sma>0 else 0,2)}%
+- Support: ₹{round(float(support_level),2)}
+- Resistance: ₹{round(float(resistance_level),2)}
 - Trend: {trend}
 - Momentum: {momentum_status}
-- Risk Level: {risk}
-- Trading Signal: {final_signal}
-Provide a concise 2-3 sentence explanation of why the signal is {final_signal}."""
+- Risk: {risk}
+- Signal: {final_signal}"""
                 
                 model = genai.GenerativeModel("gemini-2.5-flash")
                 response = model.generate_content(explanation_prompt)
@@ -218,35 +217,32 @@ Provide a concise 2-3 sentence explanation of why the signal is {final_signal}."
                 print(f"Non-critical AI explanation error: {e}")
                 ai_explanation = None
 
-        # Prepare OHLC chart data
+        # Prepare OHLC chart data robustly
         window = min(90, len(prices))
-        ohlc_cols = ['Open', 'High', 'Low', 'Close']
-        chart_data = {}
-        for col in ohlc_cols:
-            if col in data.columns:
-                chart_data[col.lower()] = data[col].dropna().to_numpy(dtype=np.float64)[-window:]
-            else:
-                chart_data[col.lower()] = prices[-window:]
         chart_dates = [d.strftime("%Y-%m-%d") for d in data.index[-window:]]
-        chart_ohlc = [{"x": chart_dates[i],
-                       "o": float(chart_data['open'][i]),
-                       "h": float(chart_data['high'][i]),
-                       "l": float(chart_data['low'][i]),
-                       "c": float(chart_data['close'][i])} for i in range(len(chart_dates))]
+        chart_ohlc = []
+        for i in range(-window, 0):
+            chart_ohlc.append({
+                "x": data.index[i].strftime("%Y-%m-%d"),
+                "o": float(data['Open'].iloc[i]) if 'Open' in data.columns else float(prices[i]),
+                "h": float(data['High'].iloc[i]) if 'High' in data.columns else float(prices[i]),
+                "l": float(data['Low'].iloc[i]) if 'Low' in data.columns else float(prices[i]),
+                "c": float(data['Close'].iloc[i]) if 'Close' in data.columns else float(prices[i]),
+            })
 
         return {
             "volatility": round(float(vol), 2),
-            "volatility_percent": round((float(vol) / float(sma) * 100) if sma > 0 else 0, 2),
-            "sma": round(float(sma), 2),
-            "ema": round(float(ema), 2),
-            "rsi": round(float(rsi), 2),
-            "support": round(float(support_level), 2),
-            "resistance": round(float(resistance_level), 2),
+            "volatility_percent": round((float(vol)/float(sma)*100) if sma>0 else 0, 2),
+            "sma": round(float(sma),2),
+            "ema": round(float(ema),2),
+            "rsi": round(float(rsi),2),
+            "support": round(float(support_level),2),
+            "resistance": round(float(resistance_level),2),
             "trend": trend,
             "momentum": momentum_status,
             "risk": risk,
             "signal": final_signal,
-            "current_price": round(float(prices[-1]), 2),
+            "current_price": round(float(prices[-1]),2),
             "ai_explanation": ai_explanation,
             "chart": {
                 "dates": chart_dates,
@@ -259,7 +255,6 @@ Provide a concise 2-3 sentence explanation of why the signal is {final_signal}."
         import traceback
         traceback.print_exc()
         return None
-
 
 # Flask routes
 @app.route('/')
