@@ -36,13 +36,14 @@ except ImportError:
 
 # Import Python engine
 try:
-    from engine import (
-        calculate_volatility,
-        calculate_sma,
-        calculate_ema,
-        calculate_rsi,
-        find_support_resistance
-    )
+    from python.engine import (
+    calculate_volatility,
+    calculate_sma,
+    calculate_ema,
+    calculate_rsi,
+    find_support_resistance
+)
+
 except ImportError as e:
     print(f"CRITICAL: Could not import engine module: {e}")
     raise
