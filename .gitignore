@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.egg-info/
+
+# Virtual environments
+env/
+venv/
+.trading_env/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Firebase service key (never commit!)
+serviceKey.json
+python/serviceKey.json
+
+# API keys
+.trading_env
+
+
