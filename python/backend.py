@@ -196,9 +196,10 @@ def analyze_stock(stock_symbol, date_from, date_to):
         ai_explanation = None
         if GEMINI_AVAILABLE and GEMINI_API_KEY:
             try:
+                current_price_safe = prices[-1].item() if hasattr(prices[-1], "item") else float(prices[-1])
                 explanation_prompt = f"""Analyze this stock and provide a brief explanation:
 Stock Analysis Summary:
-- Current Price: ₹{round(float(prices[-1]),2)}
+- Current Price: ₹{round(current_price_safe,2)}
 - EMA: ₹{round(float(ema),2)}
 - SMA: ₹{round(float(sma),2)}
 - RSI: {round(float(rsi),2)}
@@ -222,12 +223,16 @@ Stock Analysis Summary:
         chart_dates = [d.strftime("%Y-%m-%d") for d in data.index[-window:]]
         chart_ohlc = []
         for i in range(-window, 0):
+            o = data['Open'].iloc[i].item() if 'Open' in data.columns else prices[i].item()
+            h = data['High'].iloc[i].item() if 'High' in data.columns else prices[i].item()
+            l = data['Low'].iloc[i].item() if 'Low' in data.columns else prices[i].item()
+            c = data['Close'].iloc[i].item() if 'Close' in data.columns else prices[i].item()
             chart_ohlc.append({
-                "x": data.index[i].strftime("%Y-%m-%d"),
-                "o": float(data['Open'].iloc[i]) if 'Open' in data.columns else float(prices[i]),
-                "h": float(data['High'].iloc[i]) if 'High' in data.columns else float(prices[i]),
-                "l": float(data['Low'].iloc[i]) if 'Low' in data.columns else float(prices[i]),
-                "c": float(data['Close'].iloc[i]) if 'Close' in data.columns else float(prices[i]),
+                "x": chart_dates[i + window],
+                "o": round(o,2),
+                "h": round(h,2),
+                "l": round(l,2),
+                "c": round(c,2)
             })
 
         return {
@@ -242,7 +247,7 @@ Stock Analysis Summary:
             "momentum": momentum_status,
             "risk": risk,
             "signal": final_signal,
-            "current_price": round(float(prices[-1]),2),
+            "current_price": round(current_price_safe,2),
             "ai_explanation": ai_explanation,
             "chart": {
                 "dates": chart_dates,
